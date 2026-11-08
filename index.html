@@ -26,23 +26,40 @@
             transform-style: preserve-3d;
             will-change: transform;
             transform: translate3d(0, 0, 0);
-            transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .transform-style-3d {
             transform-style: preserve-3d;
             will-change: transform;
-            transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .backface-hidden {
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
             transform: translate3d(0, 0, 0);
+            contain: layout paint style;
         }
         .rotate-y-180 {
             transform: rotateY(180deg) translate3d(0, 0, 1px);
         }
         .card-flipped {
             transform: rotateY(180deg);
+        }
+
+        /* Pause offscreen animations when hidden to save 100% CPU/GPU */
+        .hidden *,
+        .pause-anims * {
+            animation-play-state: paused !important;
+        }
+
+        /* Zero-Cost Radial Glows (Replaces heavy CSS filter: blur) */
+        .radial-glow-teal {
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.22) 0%, rgba(99, 102, 241, 0.12) 42%, transparent 70%);
+        }
+        .radial-portal-aura {
+            background: radial-gradient(circle, rgba(45, 212, 191, 0.45) 0%, rgba(99, 102, 241, 0.32) 42%, rgba(244, 114, 182, 0.15) 62%, transparent 76%);
+        }
+        .radial-svg-aura {
+            background: radial-gradient(circle, rgba(45, 212, 191, 0.32) 0%, rgba(99, 102, 241, 0.22) 48%, transparent 72%);
         }
 
         /* Lightweight GPU Keyframes (No runtime blur recalculation) */
@@ -293,15 +310,14 @@
             <!-- STATE 1: CENTER ROUND BUTTON TO DRAW RANDOM CARD -->
             <div id="draw-screen" class="max-w-3xl mx-auto min-h-[520px] flex flex-col items-center justify-center glass-panel rounded-3xl p-8 text-center border border-slate-700/80 shadow-2xl relative overflow-hidden">
                 
-                <!-- Background Ambient Glow & Floating IoT Nodes -->
+                <!-- Background Ambient Glow & Floating IoT Nodes (Zero-Blur Radial Gradient) -->
                 <div class="absolute inset-0 pointer-events-none overflow-hidden">
-                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl"></div>
-                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-indigo-500/15 rounded-full blur-2xl"></div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] radial-glow-teal rounded-full"></div>
                     <!-- Floating Cyber Particles -->
-                    <span class="absolute top-12 left-16 w-2.5 h-2.5 rounded-full bg-teal-400 shadow-[0_0_12px_#2dd4bf]" style="animation: float-particle 3.2s infinite;"></span>
-                    <span class="absolute top-20 right-20 w-3 h-3 rounded-full bg-indigo-400 shadow-[0_0_12px_#818cf8]" style="animation: float-particle 4s infinite 0.7s;"></span>
-                    <span class="absolute bottom-20 left-24 w-2 h-2 rounded-full bg-pink-400 shadow-[0_0_12px_#f472b6]" style="animation: float-particle 3.6s infinite 1.2s;"></span>
-                    <span class="absolute bottom-16 right-16 w-2.5 h-2.5 rounded-full bg-cyan-300 shadow-[0_0_12px_#67e8f9]" style="animation: float-particle 2.9s infinite 0.4s;"></span>
+                    <span class="absolute top-12 left-16 w-2.5 h-2.5 rounded-full bg-teal-400" style="animation: float-particle 3.2s infinite;"></span>
+                    <span class="absolute top-20 right-20 w-3 h-3 rounded-full bg-indigo-400" style="animation: float-particle 4s infinite 0.7s;"></span>
+                    <span class="absolute bottom-20 left-24 w-2 h-2 rounded-full bg-pink-400" style="animation: float-particle 3.6s infinite 1.2s;"></span>
+                    <span class="absolute bottom-16 right-16 w-2.5 h-2.5 rounded-full bg-cyan-300" style="animation: float-particle 2.9s infinite 0.4s;"></span>
                 </div>
 
                 <!-- Interactive Portal Wrapper -->
@@ -311,8 +327,8 @@
                     <div class="absolute w-56 h-56 sm:w-64 sm:h-64 rounded-full border-2 border-teal-400/50 radar-ring-1 pointer-events-none"></div>
                     <div class="absolute w-56 h-56 sm:w-64 sm:h-64 rounded-full border-2 border-indigo-400/50 radar-ring-2 pointer-events-none"></div>
 
-                    <!-- Outer Neon Aura -->
-                    <div class="absolute -inset-8 rounded-full bg-gradient-to-tr from-teal-500 via-indigo-500 to-pink-500 opacity-40 blur-2xl group-hover:opacity-85 group-hover:scale-110 transition-all duration-500"></div>
+                    <!-- Outer Neon Aura (Zero-Blur GPU Radial Gradient) -->
+                    <div class="absolute -inset-12 rounded-full radial-portal-aura opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-transform duration-300 pointer-events-none"></div>
 
                     <!-- Outer Rotating Cyber HUD SVG Ring (Clockwise) -->
                     <svg class="absolute w-72 h-72 sm:w-80 sm:h-80 orbit-cw pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity" viewBox="0 0 200 200">
@@ -338,7 +354,7 @@
 
                     <!-- Fast Orbiting Energy Satellite -->
                     <div class="absolute w-60 h-60 sm:w-68 sm:h-68 orbit-fast pointer-events-none">
-                        <div class="w-3.5 h-3.5 rounded-full bg-teal-300 shadow-[0_0_15px_#2dd4bf,0_0_30px_#2dd4bf] mx-auto -mt-1.5"></div>
+                        <div class="w-3.5 h-3.5 rounded-full bg-teal-300 shadow-[0_0_12px_#2dd4bf] mx-auto -mt-1.5"></div>
                     </div>
 
                     <!-- Center Core Round Button -->
@@ -359,7 +375,7 @@
 
                 <!-- Hint Text Below Button -->
                 <p id="draw-hint-text" class="relative z-10 text-xs sm:text-sm text-slate-300 max-w-md mx-auto mt-4 bg-slate-900/70 border border-slate-800 px-4 py-2 rounded-full">
-                    กดปุ่มวงกลมตรงกลางเพื่อสุ่มการ์ดคำถาม IoT (ไม่ซ้ำข้อเดิม)
+                    กดปุ่มวงกลมตรงกลางเพื่อสุ่มการ์ดคำถาม IoT
                 </p>
             </div>
 
@@ -386,41 +402,41 @@
 
                                 <!-- Card Header -->
                                 <div class="relative z-10 flex flex-wrap justify-between items-center gap-2">
-                                    <span id="fc-category-badge" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-indigo-500/25 text-indigo-200 border border-indigo-400/40 shadow-[0_0_15px_rgba(99,102,241,0.3)] backdrop-blur-md">
+                                    <span id="fc-category-badge" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-indigo-950/90 text-indigo-200 border border-indigo-400/40">
                                         หมวดหมู่
                                     </span>
-                                    <span class="text-xs text-teal-200 flex items-center gap-1.5 bg-teal-500/15 border border-teal-400/40 px-3.5 py-1.5 rounded-full group-hover:bg-teal-500/30 group-hover:scale-105 transition-all shadow-[0_0_15px_rgba(20,184,166,0.2)]">
-                                        <i class="ph-bold ph-hand-tap text-teal-300 animate-bounce"></i> แตะที่ตัวการ์ดเพื่อพลิกตอบคำถาม
+                                    <span class="text-xs text-teal-200 flex items-center gap-1.5 bg-teal-950/90 border border-teal-400/40 px-3.5 py-1.5 rounded-full group-hover:border-teal-300 transition-colors">
+                                        <i class="ph-bold ph-hand-tap text-teal-300"></i> แตะที่ตัวการ์ดเพื่อพลิกตอบคำถาม
                                     </span>
                                 </div>
 
                                 <!-- SVG Illustration & Question with 3D Depth -->
                                 <div class="relative z-10 my-auto flex flex-col items-center text-center space-y-5 px-2 py-4">
-                                    <!-- Glowing Halo behind SVG Box -->
+                                    <!-- Glowing Halo behind SVG Box (Zero-Blur Radial Gradient) -->
                                     <div class="relative flex items-center justify-center">
-                                        <div class="absolute -inset-4 bg-gradient-to-r from-teal-500/25 via-indigo-500/25 to-pink-500/25 rounded-full blur-xl group-hover:opacity-100 opacity-70 transition duration-500"></div>
+                                        <div class="absolute -inset-8 radial-svg-aura rounded-full pointer-events-none"></div>
                                         <!-- Rotating Mini Ring around Graphic -->
                                         <svg class="absolute w-44 h-44 sm:w-52 sm:h-52 orbit-cw opacity-45 pointer-events-none" viewBox="0 0 160 160">
                                             <circle cx="80" cy="80" r="76" fill="none" stroke="#2dd4bf" stroke-width="1.2" stroke-dasharray="10 8" />
                                         </svg>
-                                        <div id="fc-front-svg" class="relative w-36 h-36 sm:w-44 sm:h-44 rounded-3xl bg-slate-950/85 border border-teal-400/30 flex items-center justify-center p-4 shadow-[0_0_30px_rgba(20,184,166,0.2)] animate-float group-hover:border-teal-400/70 transition-all">
+                                        <div id="fc-front-svg" class="relative w-36 h-36 sm:w-44 sm:h-44 rounded-3xl bg-slate-950 border border-teal-400/35 flex items-center justify-center p-4 shadow-lg animate-float group-hover:border-teal-400/75 transition-colors">
                                             <!-- SVG Injected via JS -->
                                         </div>
                                     </div>
 
                                     <div class="space-y-2 max-w-xl">
                                         <div class="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-teal-300 font-bold">
-                                            <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
+                                            <span class="w-2 h-2 rounded-full bg-teal-400"></span>
                                             <span>FLASHCARD QUESTION</span>
                                         </div>
-                                        <h2 id="fc-question" class="text-xl sm:text-2xl font-extrabold text-white leading-snug drop-shadow-[0_2px_10px_rgba(0,0,0,0.6)]">
+                                        <h2 id="fc-question" class="text-xl sm:text-2xl font-extrabold text-white leading-snug">
                                             <!-- Question Injected via JS -->
                                         </h2>
                                     </div>
                                 </div>
 
                                 <!-- Front Footer -->
-                                <div class="relative z-10 bg-slate-950/80 border border-slate-700/80 group-hover:border-teal-400/50 rounded-2xl p-3.5 flex items-center justify-center text-xs sm:text-sm text-slate-300 group-hover:text-teal-200 transition-all shadow-inner">
+                                <div class="relative z-10 bg-slate-950/90 border border-slate-700/80 group-hover:border-teal-400/50 rounded-2xl p-3.5 flex items-center justify-center text-xs sm:text-sm text-slate-300 group-hover:text-teal-200 transition-colors">
                                     <span class="flex items-center gap-2 font-semibold">
                                         <i class="ph-bold ph-arrows-clockwise text-teal-400 text-lg group-hover:rotate-180 transition-transform duration-500"></i>
                                         คลิกที่การ์ดเพื่อพลิกดูตัวเลือกคำตอบ 4 ข้อ
@@ -460,7 +476,7 @@
                                     </div>
 
                                     <!-- Feedback & Reason Box (Shown after selecting an option) -->
-                                    <div id="fc-feedback-box" class="hidden rounded-2xl p-4 border backdrop-blur-md transition-all">
+                                    <div id="fc-feedback-box" class="hidden rounded-2xl p-4 border transition-colors">
                                         <div class="flex items-start justify-between gap-3">
                                             <div class="flex items-start gap-2.5">
                                                 <i id="fc-feedback-icon" class="text-2xl shrink-0 mt-0.5"></i>
@@ -842,43 +858,56 @@
         let currentCard = null;
         let isFlipped = false;
         let hasAnsweredCurrent = false;
+        let isFlippingNow = false;
         let tiltRafId = null;
         let stageRectCache = null;
+
+        // Cached DOM Elements for Zero-Overhead Lookups
+        let domStage = null;
+        let domTiltBox = null;
+        let domCardInner = null;
+        let domGlareFront = null;
+        let domGlareBack = null;
 
         // Clear cached bounding box on resize/scroll so mouse move never triggers forced layout reflow
         window.addEventListener('resize', () => { stageRectCache = null; }, { passive: true });
         window.addEventListener('scroll', () => { stageRectCache = null; }, { passive: true });
 
-        // Ultra-Smooth 60fps 3D Tilt & Glare using pure GPU translate3d/rotate
+        // Ultra-Smooth 60/120fps 3D Tilt & Glare (Zero CSS transition conflict)
         function handleCardMouseMove(e) {
-            const stage = document.getElementById('card-Stage');
-            const tiltBox = document.getElementById('card-tilt-box');
-            if (!stage || !tiltBox) return;
+            if (isFlippingNow) return;
+            if (!domStage) {
+                domStage = document.getElementById('card-Stage');
+                domTiltBox = document.getElementById('card-tilt-box');
+                domGlareFront = document.getElementById('glare-front');
+                domGlareBack = document.getElementById('glare-back');
+            }
+            if (!domStage || !domTiltBox) return;
 
             if (!stageRectCache) {
-                stageRectCache = stage.getBoundingClientRect();
+                stageRectCache = domStage.getBoundingClientRect();
             }
 
             const clientX = e.clientX;
             const clientY = e.clientY;
 
-            if (tiltRafId) return; // Skip if frame already queued
+            if (tiltRafId) return;
 
             tiltRafId = requestAnimationFrame(() => {
                 tiltRafId = null;
-                if (!stageRectCache) return;
+                if (!stageRectCache || isFlippingNow) return;
 
                 const x = clientX - stageRectCache.left;
                 const y = clientY - stageRectCache.top;
                 const centerX = stageRectCache.width * 0.5;
                 const centerY = stageRectCache.height * 0.5;
 
-                const rotateX = ((y - centerY) / centerY) * -5.5;
-                const rotateY = ((x - centerX) / centerX) * 5.5;
+                const rotateX = ((y - centerY) / centerY) * -5;
+                const rotateY = ((x - centerX) / centerX) * 5;
 
-                tiltBox.style.transform = `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateZ(0)`;
+                domTiltBox.style.transform = `rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateZ(0)`;
 
-                const glareEl = document.getElementById(isFlipped ? 'glare-back' : 'glare-front');
+                const glareEl = isFlipped ? domGlareBack : domGlareFront;
                 if (glareEl) {
                     glareEl.style.transform = `translate3d(${x.toFixed(0)}px, ${y.toFixed(0)}px, 0)`;
                 }
@@ -891,9 +920,9 @@
                 tiltRafId = null;
             }
             stageRectCache = null;
-            const tiltBox = document.getElementById('card-tilt-box');
-            if (tiltBox) {
-                tiltBox.style.transform = 'rotateX(0deg) rotateY(0deg) translateZ(0)';
+            if (!domTiltBox) domTiltBox = document.getElementById('card-tilt-box');
+            if (domTiltBox) {
+                domTiltBox.style.transform = 'rotateX(0deg) rotateY(0deg) translateZ(0)';
             }
         }
 
@@ -948,6 +977,11 @@
 
         // Initialize App
         function initApp() {
+            domStage = document.getElementById('card-Stage');
+            domTiltBox = document.getElementById('card-tilt-box');
+            domCardInner = document.getElementById('flashcard-inner');
+            domGlareFront = document.getElementById('glare-front');
+            domGlareBack = document.getElementById('glare-back');
             restartGame();
             renderSummaryTable();
         }
@@ -967,7 +1001,7 @@
             const subtextEl = document.getElementById('draw-subtext');
             const hintEl = document.getElementById('draw-hint-text');
             if (subtextEl) subtextEl.textContent = `เหลืออีก ${remainingPool.length} ข้อ`;
-            if (hintEl) hintEl.textContent = 'กดปุ่มวงกลมตรงกลางเพื่อสุ่มการ์ดคำถาม IoT (ไม่ซ้ำข้อเดิม)';
+            if (hintEl) hintEl.textContent = 'กดปุ่มวงกลมตรงกลางเพื่อสุ่มการ์ดคำถาม IoT';
         }
 
         // Switch between 'draw', 'card', and 'result' screens inside Flashcard section
@@ -1001,7 +1035,7 @@
                 setTimeout(() => {
                     portal.classList.remove('portal-activating');
                     drawNextCard();
-                }, 150);
+                }, 90);
             } else {
                 drawNextCard();
             }
@@ -1050,11 +1084,11 @@
             document.getElementById('fc-next-draw-btn').classList.add('hidden');
             document.getElementById('fc-back-hint').classList.remove('hidden');
 
-            // Render 4 Interactive Options with Cyber Hover Glow
+            // Render 4 Interactive Options with GPU Transform Hover
             const optionsContainer = document.getElementById('fc-options-list');
             optionsContainer.innerHTML = currentCard.options.map((opt, idx) => `
-                <button onclick="selectAnswer(${idx}, event)" id="fc-opt-${idx}" class="group/opt w-full text-left flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-slate-900/85 hover:bg-slate-800/95 border-2 border-slate-700/80 hover:border-teal-400 text-slate-100 transition-all duration-200 shadow-md hover:shadow-[0_0_20px_rgba(45,212,191,0.25)] hover:-translate-y-0.5 active:scale-[0.98]">
-                    <span class="w-8 h-8 rounded-xl bg-slate-950 border border-slate-600 group-hover/opt:border-teal-400 group-hover/opt:bg-teal-500/20 flex items-center justify-center text-xs font-extrabold text-teal-300 shrink-0 transition-colors">
+                <button onclick="selectAnswer(${idx}, event)" id="fc-opt-${idx}" class="group/opt w-full text-left flex items-center gap-3 p-3.5 sm:p-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border-2 border-slate-700/80 hover:border-teal-400 text-slate-100 transition-transform duration-150 hover:-translate-y-0.5 active:scale-[0.98]">
+                    <span class="w-8 h-8 rounded-xl bg-slate-950 border border-slate-600 group-hover/opt:border-teal-400 group-hover/opt:bg-teal-500/20 flex items-center justify-center text-xs font-extrabold text-teal-300 shrink-0">
                         ${idx + 1}
                     </span>
                     <span class="text-xs sm:text-sm font-medium leading-snug">${opt}</span>
@@ -1062,17 +1096,23 @@
             `).join('');
         }
 
-        // Flip card to Back (Answer Options)
+        // Flip card to Back (Answer Options) - Pause tilt during 3D flip for 0 frame drops
         function flipToAnswer() {
             isFlipped = true;
+            isFlippingNow = true;
+            if (domTiltBox) domTiltBox.style.transform = 'rotateX(0deg) rotateY(0deg) translateZ(0)';
             document.getElementById('flashcard-inner').classList.add('card-flipped');
+            setTimeout(() => { isFlippingNow = false; }, 480);
         }
 
         // Flip card back to Front (Question & SVG)
         function flipToQuestion(event) {
             if (event) event.stopPropagation();
             isFlipped = false;
+            isFlippingNow = true;
+            if (domTiltBox) domTiltBox.style.transform = 'rotateX(0deg) rotateY(0deg) translateZ(0)';
             document.getElementById('flashcard-inner').classList.remove('card-flipped');
+            setTimeout(() => { isFlippingNow = false; }, 480);
         }
 
         // Handle user selecting one of the 4 choices on the back of the card
@@ -1183,23 +1223,23 @@
                 msgHeading.textContent = "ไม่เป็นไรเลยนะ! นี่เพิ่งก้าวแรกของการเรียนรู้ ✌️💛";
                 msgBody.textContent = "ได้คะแนนน้อยในรอบนี้ไม่ต้องเสียใจเลยนะคะ เรื่อง IoT มีคำศัพท์ใหม่ๆ เยอะ ลองเปิดดูคลิปสอนด้านบนควบคู่ไปด้วย แล้วกดสุ่มการ์ดทบทวนอีกรอบ รับรองว่าครั้งหน้าทำได้เก่งขึ้นแน่นอน สู้ๆ นะคะ!";
             } else if (correctScore <= 7) {
-                // Good/Encouraging Blessing for 5-7
+                // Praise message for 5-7
                 iconWrap.className = "w-24 h-24 mx-auto rounded-3xl flex items-center justify-center text-5xl bg-teal-500/20 border-2 border-teal-400/40 text-teal-300";
-                iconWrap.innerHTML = `<i class="ph-fill ph-ShootingStar"></i>`;
+                iconWrap.innerHTML = `<i class="ph-fill ph-shooting-star"></i>`;
 
                 msgBox.className = "max-w-xl mx-auto p-6 rounded-2xl border bg-teal-950/40 border-teal-500/40 text-center space-y-2";
                 msgHeading.className = "text-lg sm:text-xl font-bold text-teal-300";
-                msgHeading.textContent = "เก่งมากเลย! พื้นฐาน IoT แน่นใช้ได้เลยทีเดียว 🌟👏";
-                msgBody.textContent = "ขออวยพรให้สนุกกับการต่อยอดโลกของ Internet of Things นะคะ มีความเข้าใจที่ดีเยี่ยมแล้ว ลองสุ่มเล่นอีกสักรอบเพื่อเก็บตกข้อที่พลาดไป จะได้เก่งครบเต็ม 10 ข้อเลย!";
+                msgHeading.textContent = "ยอดเยี่ยมมาก! พื้นฐาน IoT ของคุณแน่นใช้ได้เลย 🌟👏";
+                msgBody.textContent = "ขอชื่นชมในความตั้งใจเลยค่ะ คุณเข้าใจหลักการทำงานของระบบ IoT ได้ดีมาก เหลืออีกนิดเดียวก็จะสมบูรณ์แบบแล้ว ลองสุ่มทบทวนอีกสักรอบเพื่อเก็บตกข้อที่พลาดไป รับรองว่าเต็ม 10 แน่นอนค่ะ!";
             } else {
-                // High Score Blessing for 8-10
+                // High Score Praise message for 8-10
                 iconWrap.className = "w-24 h-24 mx-auto rounded-3xl flex items-center justify-center text-5xl bg-emerald-500/20 border-2 border-emerald-400/40 text-emerald-300";
                 iconWrap.innerHTML = `<i class="ph-fill ph-trophy"></i>`;
 
                 msgBox.className = "max-w-xl mx-auto p-6 rounded-2xl border bg-emerald-950/40 border-emerald-500/40 text-center space-y-2";
                 msgHeading.className = "text-lg sm:text-xl font-bold text-emerald-300";
-                msgHeading.textContent = "สุดยอดไปเลย! คุณคือปรมาจารย์ด้านพื้นฐาน IoT 🎉🏆";
-                msgBody.textContent = "ขออวยพรให้ประสบความสำเร็จในการเรียนและการสร้างสรรค์โปรเจกต์ IoT ล้ำๆ นะคะ ความรู้พื้นฐานแม่นยำมาก ไม่ว่าจะไปทำข้อสอบหรือลงมือต่อวงจรจริงก็ผ่านฉลุยแน่นอนค่ะ!";
+                msgHeading.textContent = "สุดยอดไปเลย! คุณเข้าใจพื้นฐาน IoT ได้อย่างแม่นยำมาก 🎉🏆";
+                msgBody.textContent = "ขอปรบมือชื่นชมดังๆ เลยค่ะ! คุณมีความรู้ความเข้าใจเรื่ององค์ประกอบ อุปกรณ์ และการทำงานของ IoT ในระดับดีเยี่ยม พร้อมสำหรับการนำไปต่อยอดทำโปรเจกต์จริงได้อย่างสบายๆ เลยค่ะ!";
             }
         }
 
