@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Master - Interactive Flashcard & Quiz</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(20, 184, 166, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #f8fafc;
+        }
+
+        /* 3D Flip Card Styles */
+        .perspective-1000 {
+            perspective: 1200px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        .card-flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-teal-500 selection:text-white">
+
+    <!-- Navbar / Header -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+                    <i class="ph-fill ph-cpu text-2xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-white via-teal-200 to-indigo-300 bg-clip-text text-transparent">
+                        หลักการพื้นฐาน IoT
+                    </h1>
+                    <p class="text-xs text-slate-400">Internet of Things สำหรับผู้เริ่มต้น</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+                <button onclick="switchMode('flashcard')" id="tab-flashcard" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-md">
+                    <i class="ph-bold ph-cards text-lg"></i>
+                    <span>Flashcards</span>
+                </button>
+                <button onclick="switchMode('quiz')" id="tab-quiz" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-all duration-200">
+                    <i class="ph-bold ph-exam text-lg"></i>
+                    <span>ทำแบบทดสอบ</span>
+                </button>
+                <button onclick="switchMode('video')" id="tab-video" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-all duration-200">
+                    <i class="ph-bold ph-youtube-logo text-lg text-rose-500"></i>
+                    <span>คลิปสอน + สรุป</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+
+        <!-- ================= MODE 1: FLASHCARDS ================= -->
+        <section id="section-flashcard" class="space-y-6">
+            <!-- Top Bar: Progress & Controls -->
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 glass-panel p-4 rounded-2xl">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <span id="fc-counter" class="px-3.5 py-1.5 rounded-xl bg-teal-500/20 border border-teal-500/30 text-teal-300 font-semibold text-sm">
+                        การ์ด 1 / 10
+                    </span>
+                    <div class="flex-grow sm:w-48 h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div id="fc-progress" class="h-full bg-gradient-to-r from-teal-400 to-indigo-500 transition-all duration-300" style="width: 10%"></div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button onclick="toggleMastered()" id="btn-mastered" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition border border-slate-700">
+                        <i class="ph ph-check-circle text-lg"></i>
+                        <span>จำได้แล้ว (<span id="mastered-count">0</span>/10)</span>
+                    </button>
+                    <button onclick="shuffleCards()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition border border-slate-700" title="สลับลำดับการ์ด">
+                        <i class="ph ph-shuffle text-lg text-indigo-400"></i>
+                        <span>สลับการ์ด</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3D Flashcard Container -->
+            <div class="max-w-3xl mx-auto">
+                <div class="perspective-1000 w-full h-[460px] sm:h-[490px] cursor-pointer select-none" onclick="flipCard()">
+                    <div id="flashcard-inner" class="relative w-full h-full transform-style-3d">
+                        
+                        <!-- FRONT OF CARD (Question + Graphic + Choices Preview) -->
+                        <div class="absolute inset-0 w-full h-full backface-hidden glass-panel rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl border border-slate-700/80 hover:border-teal-500/50 transition-colors">
+                            <!-- Card Header -->
+                            <div class="flex justify-between items-center">
+                                <span id="fc-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                    คำถามข้อที่ 1
+                                </span>
+                                <span class="text-xs text-slate-400 flex items-center gap-1.5 bg-slate-800/80 px-3 py-1 rounded-full">
+                                    <i class="ph-bold ph-hand-tap text-teal-400 animate-pulse"></i> คลิกหรือกด Spacebar เพื่อพลิกดูเฉลย
+                                </span>
+                            </div>
+
+                            <!-- SVG Illustration & Question -->
+                            <div class="my-auto flex flex-col items-center text-center space-y-4">
+                                <div id="fc-front-svg" class="w-36 h-36 sm:w-40 sm:h-40 rounded-2xl bg-slate-900/70 border border-slate-800 flex items-center justify-center p-3 shadow-inner animate-float">
+                                    <!-- SVG Injected via JS -->
+                                </div>
+                                <h2 id="fc-question" class="text-xl sm:text-2xl font-bold text-white leading-snug max-w-xl">
+                                    <!-- Question Injected via JS -->
+                                </h2>
+                            </div>
+
+                            <!-- Options Preview Pill Grid -->
+                            <div id="fc-options-preview" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-800/80">
+                                <!-- Options Injected via JS -->
+                            </div>
+                        </div>
+
+                        <!-- BACK OF CARD (Answer + Reason) -->
+                        <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-2xl bg-gradient-to-br from-slate-900 via-teal-950/90 to-indigo-950 border-2 border-teal-500/50">
+                            <!-- Back Header -->
+                            <div class="flex justify-between items-center">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                                    <i class="ph-fill ph-check-circle text-emerald-400"></i> เฉลยคำตอบที่ถูกต้อง
+                                </span>
+                                <span class="text-xs text-slate-300 flex items-center gap-1">
+                                    <i class="ph ph-arrows-clockwise"></i> คลิกเพื่อกลับด้าน
+                                </span>
+                            </div>
+
+                            <!-- Answer Content -->
+                            <div class="my-auto flex flex-col items-center text-center space-y-5 px-2">
+                                <div id="fc-back-svg" class="w-28 h-28 rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center p-2">
+                                    <!-- SVG Injected via JS -->
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="text-xs uppercase tracking-wider text-teal-400 font-semibold">คำตอบคือ</div>
+                                    <div id="fc-answer" class="text-2xl sm:text-3xl font-bold text-white bg-emerald-500/20 border border-emerald-500/40 px-6 py-3 rounded-2xl shadow-lg">
+                                        <!-- Answer Injected via JS -->
+                                    </div>
+                                </div>
+
+                                <div class="w-full max-w-lg bg-slate-900/80 border border-slate-700/80 rounded-2xl p-4 text-left flex items-start gap-3">
+                                    <i class="ph-fill ph-lightbulb-filament text-2xl text-amber-400 shrink-0 mt-0.5"></i>
+                                    <div>
+                                        <div class="text-xs font-semibold text-amber-300 mb-0.5">เหตุผล / คำอธิบาย:</div>
+                                        <p id="fc-reason" class="text-sm sm:text-base text-slate-200 leading-relaxed">
+                                            <!-- Reason Injected via JS -->
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Back Footer -->
+                            <div class="text-center text-xs text-slate-400">
+                                เอกสาร: แบบทดสอบ หลักการพื้นฐาน IoT (Internet of Things สำหรับผู้เริ่มต้น)
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Card Navigation Controls -->
+                <div class="flex items-center justify-between gap-4 mt-6">
+                    <button onclick="prevCard()" class="flex items-center gap-2 px-5 py-3 rounded-2xl glass-panel hover:bg-slate-800 text-white font-medium transition active:scale-95">
+                        <i class="ph-bold ph-caret-left text-lg"></i>
+                        <span>ข้อก่อนหน้า</span>
+                    </button>
+
+                    <button onclick="flipCard()" class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-teal-500/20 transition active:scale-95">
+                        <i class="ph-bold ph-arrows-left-right text-lg"></i>
+                        <span>พลิกการ์ด</span>
+                    </button>
+
+                    <button onclick="nextCard()" class="flex items-center gap-2 px-5 py-3 rounded-2xl glass-panel hover:bg-slate-800 text-white font-medium transition active:scale-95">
+                        <span>ข้อถัดไป</span>
+                        <i class="ph-bold ph-caret-right text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Quick Jump Dots -->
+                <div id="fc-dots" class="flex justify-center flex-wrap gap-2 mt-6">
+                    <!-- Dots Injected via JS -->
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= MODE 2: INTERACTIVE QUIZ ================= -->
+        <section id="section-quiz" class="hidden max-w-3xl mx-auto space-y-6">
+            <!-- Student Info Header (Matching Original Worksheet) -->
+            <div class="glass-panel rounded-3xl p-6 border border-slate-700/80">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i class="ph-fill ph-NotePencil text-teal-400"></i>
+                            แบบทดสอบ หลักการพื้นฐาน IoT
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">คำชี้แจง: เลือกคำตอบที่ถูกต้องที่สุดเพียงข้อเดียว</p>
+                    </div>
+                    <div class="px-4 py-2 rounded-2xl bg-slate-900 border border-slate-700 text-right">
+                        <span class="text-xs text-slate-400 block">คะแนนที่ได้</span>
+                        <span id="quiz-live-score" class="text-xl font-bold text-teal-400">0 / 10</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">ชื่อ-สกุล (ไม่บังคับ)</label>
+                        <input type="text" id="student-name" placeholder="กรอกชื่อ-นามสกุลของคุณ..." class="w-full px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-sm text-white focus:outline-none focus:border-teal-500">
+                    </div>
+                    <div class="flex items-end justify-between sm:justify-end gap-2">
+                        <button onclick="resetQuiz()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm text-slate-300 border border-slate-700 flex items-center gap-1.5 transition">
+                            <i class="ph ph-arrow-counter-clockwise"></i> เริ่มทำใหม่ทั้งหมด
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All 10 Questions List -->
+            <div id="quiz-questions-container" class="space-y-6">
+                <!-- Injected via JS -->
+            </div>
+
+            <!-- Quiz Summary Card -->
+            <div id="quiz-result-box" class="hidden glass-panel rounded-3xl p-8 text-center border-2 border-teal-500/50 space-y-4">
+                <div class="w-20 h-20 rounded-full bg-teal-500/20 border border-teal-500/40 flex items-center justify-center mx-auto text-teal-300">
+                    <i class="ph-fill ph-trophy text-4xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-white">สรุปผลคะแนนของคุณ</h3>
+                <p id="quiz-result-name" class="text-slate-300 text-sm"></p>
+                <div id="quiz-final-score" class="text-5xl font-extrabold bg-gradient-to-r from-teal-300 to-indigo-400 bg-clip-text text-transparent py-2">
+                    10 / 10
+                </div>
+                <p id="quiz-feedback-msg" class="text-slate-300 max-w-md mx-auto text-sm"></p>
+                <div class="pt-4 flex justify-center gap-3">
+                    <button onclick="resetQuiz()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-indigo-600 text-white font-semibold shadow-lg">
+                        ทำแบบทดสอบอีกครั้ง
+                    </button>
+                    <button onclick="switchMode('flashcard')" class="px-6 py-2.5 rounded-xl bg-slate-800 text-slate-200 font-medium border border-slate-700">
+                        กลับไปทบทวน Flashcard
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= MODE 3: VIDEO & CHEATSHEET ================= -->
+        <section id="section-video" class="hidden space-y-8">
+            <!-- Video Embed Card -->
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-700/80">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 inline-flex items-center gap-1.5 mb-2">
+                            <i class="ph-fill ph-youtube-logo"></i> วิดีโอประกอบการเรียนรู้
+                        </span>
+                        <h2 class="text-2xl font-bold text-white">คลิปสอนหลักการพื้นฐาน IoT</h2>
+                        <p class="text-sm text-slate-400">ดูคลิปวิดีโอควบคู่ไปกับการท่องจำ Flashcard เพื่อให้เข้าใจเห็นภาพชัดเจนยิ่งขึ้น</p>
+                    </div>
+                    <a href="https://www.youtube.com/watch?v=BNlp9_aIegI" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium transition shrink-0 self-start sm:self-auto shadow-lg shadow-rose-600/25">
+                        <i class="ph-bold ph-arrow-square-out text-lg"></i>
+                        เปิดดูบน YouTube
+                    </a>
+                </div>
+
+                <!-- Responsive 16:9 YouTube Embed -->
+                <div class="relative w-full overflow-hidden rounded-2xl border border-slate-700 shadow-2xl bg-slate-950" style="padding-top: 56.25%;">
+                    <iframe 
+                        class="absolute inset-0 w-full h-full"
+                        src="https://www.youtube.com/embed/BNlp9_aIegI?rel=0" 
+                        title="คลิปสอนหลักการพื้นฐาน IoT" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                        allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+
+            <!-- Full Answer Key Table (Cheatsheet) -->
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-700/80">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-300">
+                        <i class="ph-bold ph-table text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">ตารางสรุปเฉลยแบบทดสอบทั้ง 10 ข้อ</h3>
+                        <p class="text-xs text-slate-400">สรุปคำตอบและเหตุผลสำหรับทบทวนอย่างรวดเร็ว</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-700 text-xs uppercase text-slate-400 bg-slate-900/60">
+                                <th class="py-3.5 px-4 rounded-tl-xl">ข้อ</th>
+                                <th class="py-3.5 px-4">คำถาม</th>
+                                <th class="py-3.5 px-4">คำตอบที่ถูก</th>
+                                <th class="py-3.5 px-4 rounded-tr-xl">เหตุผล / คำอธิบาย</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-table-body" class="divide-y divide-slate-800 text-sm">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <span>สร้างสำหรับทบทวนบทเรียน: <strong>หลักการพื้นฐาน IoT (Internet of Things สำหรับผู้เริ่มต้น)</strong></span>
+            <span class="flex items-center gap-1">ใช้ปุ่มลูกศร <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded">←</kbd> <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded">→</kbd> เพื่อเลื่อนการ์ด และ <kbd class="px-1.5 py-0.5 bg-slate-800 text-slate-300 rounded">Spacebar</kbd> เพื่อพลิกการ์ด</span>
+        </div>
+    </footer>
+
+    <!-- ================= JAVASCRIPT LOGIC & DATA ================= -->
+    <script>
+        // Complete Question Bank with Custom SVG Illustrations for each IoT Concept
+        const iotQuestions = [
+            {
+                id: 1,
+                question: "IoT ย่อมาจากอะไร",
+                options: [
+                    "ก. Internet of Technology",
+                    "ข. Internet of Things",
+                    "ค. Input Output Tools",
+                    "ง. Information of Things"
+                ],
+                correctIndex: 1,
+                correctLetter: "ข",
+                answerShort: "ข. Internet of Things",
+                reason: "Internet of Things = อินเทอร์เน็ตของสรรพสิ่ง",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <defs>
+                            <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#2dd4bf"/>
+                                <stop offset="100%" stop-color="#6366f1"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="60" cy="60" r="36" fill="none" stroke="url(#g1)" stroke-width="3" stroke-dasharray="5 3"/>
+                        <ellipse cx="60" cy="60" rx="36" ry="16" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.6"/>
+                        <ellipse cx="60" cy="60" rx="16" ry="36" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.6"/>
+                        <circle cx="60" cy="20" r="6" fill="#2dd4bf"/>
+                        <circle cx="96" cy="75" r="6" fill="#818cf8"/>
+                        <circle cx="24" cy="75" r="6" fill="#f472b6"/>
+                        <rect x="42" y="48" width="36" height="24" rx="6" fill="#0f172a" stroke="#2dd4bf" stroke-width="2"/>
+                        <text x="60" y="65" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="bold">IoT</text>
+                      </svg>`
+            },
+            {
+                id: 2,
+                question: "ข้อใดอธิบายความหมายของ IoT ได้ถูกต้องที่สุด",
+                options: [
+                    "ก. การใช้คอมพิวเตอร์เล่นอินเทอร์เน็ต",
+                    "ข. การทำให้สิ่งของต่อเครือข่าย ส่งข้อมูลและรับคำสั่งได้เอง",
+                    "ค. การซ่อมอุปกรณ์ไฟฟ้าด้วยมือถือ",
+                    "ง. การเก็บไฟล์ไว้ในแฟลชไดรฟ์"
+                ],
+                correctIndex: 1,
+                correctLetter: "ข",
+                answerShort: "ข. การทำให้สิ่งของต่อเครือข่าย ส่งข้อมูลและรับคำสั่งได้เอง",
+                reason: "สิ่งของต่อเครือข่าย ส่งข้อมูล และรับคำสั่งได้เอง",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- Cloud -->
+                        <path d="M40 45 Q40 30 55 30 Q65 20 78 30 Q92 32 90 45 Z" fill="#38bdf8" opacity="0.85"/>
+                        <!-- Connection lines -->
+                        <line x1="50" y1="48" x2="30" y2="80" stroke="#2dd4bf" stroke-width="2.5" stroke-dasharray="4"/>
+                        <line x1="65" y1="48" x2="65" y2="80" stroke="#2dd4bf" stroke-width="2.5" stroke-dasharray="4"/>
+                        <line x1="80" y1="48" x2="95" y2="80" stroke="#2dd4bf" stroke-width="2.5" stroke-dasharray="4"/>
+                        <!-- Smart Home / Bulb / Phone -->
+                        <circle cx="30" cy="88" r="12" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/>
+                        <circle cx="30" cy="88" r="5" fill="#fbbf24"/>
+                        <rect x="55" y="76" width="20" height="24" rx="4" fill="#1e293b" stroke="#818cf8" stroke-width="2"/>
+                        <circle cx="95" cy="88" r="12" fill="#1e293b" stroke="#34d399" stroke-width="2"/>
+                        <path d="M90 88 L94 92 L101 84" stroke="#34d399" stroke-width="2" fill="none"/>
+                      </svg>`
+            },
+            {
+                id: 3,
+                question: "ระบบ IoT มีส่วนประกอบหลักกี่ส่วน",
+                options: [
+                    "ก. 2 ส่วน",
+                    "ข. 3 ส่วน",
+                    "ค. 4 ส่วน",
+                    "ง. 5 ส่วน"
+                ],
+                correctIndex: 2,
+                correctLetter: "ค",
+                answerShort: "ค. 4 ส่วน",
+                reason: "เซนเซอร์ · การเชื่อมต่อ · การประมวลผล · ผู้ใช้งาน",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <rect x="18" y="18" width="38" height="38" rx="8" fill="#0f766e" stroke="#2dd4bf" stroke-width="2"/>
+                        <text x="37" y="42" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">1</text>
+                        <rect x="64" y="18" width="38" height="38" rx="8" fill="#3730a3" stroke="#818cf8" stroke-width="2"/>
+                        <text x="83" y="42" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">2</text>
+                        <rect x="18" y="64" width="38" height="38" rx="8" fill="#831843" stroke="#f472b6" stroke-width="2"/>
+                        <text x="37" y="88" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">3</text>
+                        <rect x="64" y="64" width="38" height="38" rx="8" fill="#78350f" stroke="#fbbf24" stroke-width="2"/>
+                        <text x="83" y="88" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">4</text>
+                      </svg>`
+            },
+            {
+                id: 4,
+                question: 'อุปกรณ์ใดทำหน้าที่เป็น "สมอง" คอยรับค่า คิด และสั่งงาน',
+                options: [
+                    "ก. เซนเซอร์",
+                    "ข. บอร์ดควบคุม",
+                    "ค. หลอดไฟ",
+                    "ง. ปั๊มน้ำ"
+                ],
+                correctIndex: 1,
+                correctLetter: "ข",
+                answerShort: "ข. บอร์ดควบคุม",
+                reason: "บอร์ดควบคุม เช่น ESP32, Arduino เป็นสมองของระบบ",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- Microcontroller Chip -->
+                        <rect x="32" y="32" width="56" height="56" rx="8" fill="#1e293b" stroke="#2dd4bf" stroke-width="3"/>
+                        <rect x="44" y="44" width="32" height="32" rx="4" fill="#0f766e"/>
+                        <text x="60" y="64" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold">ESP32</text>
+                        <!-- Pins -->
+                        <line x1="42" y1="20" x2="42" y2="32" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="60" y1="20" x2="60" y2="32" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="78" y1="20" x2="78" y2="32" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="42" y1="88" x2="42" y2="100" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="60" y1="88" x2="60" y2="100" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="78" y1="88" x2="78" y2="100" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="20" y1="42" x2="32" y2="42" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="20" y1="60" x2="32" y2="60" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="20" y1="78" x2="32" y2="78" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="88" y1="42" x2="100" y2="42" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="88" y1="60" x2="100" y2="60" stroke="#94a3b8" stroke-width="3"/>
+                        <line x1="88" y1="78" x2="100" y2="78" stroke="#94a3b8" stroke-width="3"/>
+                      </svg>`
+            },
+            {
+                id: 5,
+                question: 'ข้อใดเป็น "เซนเซอร์" (ตัวรับรู้)',
+                options: [
+                    "ก. มอเตอร์",
+                    "ข. พัดลม",
+                    "ค. ตัววัดความชื้นในดิน",
+                    "ง. กลอนประตูไฟฟ้า"
+                ],
+                correctIndex: 2,
+                correctLetter: "ค",
+                answerShort: "ค. ตัววัดความชื้นในดิน",
+                reason: "เซนเซอร์มีหน้าที่วัดค่าหรือรับรู้สิ่งรอบตัว",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- Soil line -->
+                        <path d="M15 78 Q60 72 105 78 L105 105 L15 105 Z" fill="#78350f" opacity="0.7"/>
+                        <!-- Soil Moisture Sensor Forks -->
+                        <rect x="42" y="25" width="36" height="22" rx="4" fill="#0284c7" stroke="#38bdf8" stroke-width="2"/>
+                        <path d="M46 47 L46 90 L52 96 L52 47 Z" fill="#fbbf24"/>
+                        <path d="M68 47 L68 96 L74 90 L74 47 Z" fill="#fbbf24"/>
+                        <!-- Water drops -->
+                        <circle cx="30" cy="62" r="4" fill="#38bdf8"/>
+                        <circle cx="90" cy="58" r="5" fill="#38bdf8"/>
+                      </svg>`
+            },
+            {
+                id: 6,
+                question: 'ข้อใดเป็น "แอคชูเอเตอร์" (ตัวลงมือทำ)',
+                options: [
+                    "ก. ตัววัดอุณหภูมิ",
+                    "ข. ตัวจับการเคลื่อนไหว",
+                    "ค. ตัววัดแสง",
+                    "ง. ปั๊มน้ำ"
+                ],
+                correctIndex: 3,
+                correctLetter: "ง",
+                answerShort: "ง. ปั๊มน้ำ",
+                reason: "แอคชูเอเตอร์รับคำสั่งแล้วลงมือทำ",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- Water Pump Body -->
+                        <circle cx="52" cy="68" r="24" fill="#0f766e" stroke="#2dd4bf" stroke-width="3"/>
+                        <circle cx="52" cy="68" r="10" fill="#1e293b" stroke="#2dd4bf" stroke-width="2"/>
+                        <!-- Outlet Pipe -->
+                        <rect x="64" y="34" width="22" height="12" rx="3" fill="#0f766e" stroke="#2dd4bf" stroke-width="2"/>
+                        <!-- Water Spray -->
+                        <path d="M90 38 Q105 30 110 20" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <path d="M92 42 Q108 42 114 38" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <path d="M90 46 Q105 54 110 60" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round"/>
+                      </svg>`
+            },
+            {
+                id: 7,
+                question: "ถ้าต้องติดตั้งระบบในไร่ที่อยู่ไกลและไม่มี WiFi ควรเลือกการเชื่อมต่อแบบใด",
+                options: [
+                    "ก. Bluetooth",
+                    "ข. สาย USB",
+                    "ค. 4G หรือ LoRa",
+                    "ง. WiFi ในบ้าน"
+                ],
+                correctIndex: 2,
+                correctLetter: "ค",
+                answerShort: "ค. 4G หรือ LoRa",
+                reason: "4G/LoRa ส่งได้ไกลหลายกิโลเมตร",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- Radio Tower -->
+                        <path d="M45 98 L60 38 L75 98" stroke="#cbd5e1" stroke-width="3" fill="none"/>
+                        <line x1="50" y1="78" x2="70" y2="78" stroke="#cbd5e1" stroke-width="2"/>
+                        <line x1="54" y1="58" x2="66" y2="58" stroke="#cbd5e1" stroke-width="2"/>
+                        <circle cx="60" cy="35" r="5" fill="#2dd4bf"/>
+                        <!-- Signal Waves -->
+                        <path d="M42 25 Q30 35 42 45" stroke="#2dd4bf" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <path d="M32 18 Q15 35 32 52" stroke="#2dd4bf" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <path d="M78 25 Q90 35 78 45" stroke="#2dd4bf" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        <path d="M88 18 Q105 35 88 52" stroke="#2dd4bf" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                      </svg>`
+            },
+            {
+                id: 8,
+                question: "IP Address เปรียบได้กับข้อใด",
+                options: [
+                    "ก. เลขที่บ้าน",
+                    "ข. เลขบัตรประชาชน",
+                    "ค. รหัสผ่าน WiFi",
+                    "ง. ชื่อเล่นของอุปกรณ์"
+                ],
+                correctIndex: 0,
+                correctLetter: "ก",
+                answerShort: "ก. เลขที่บ้าน",
+                reason: "IP = เลขที่บ้าน ใช้ส่งข้อมูลให้ถูกเครื่อง",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- House -->
+                        <path d="M25 56 L60 26 L95 56" stroke="#38bdf8" stroke-width="4" fill="none" stroke-linecap="round"/>
+                        <rect x="35" y="52" width="50" height="42" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5"/>
+                        <!-- IP Address Sign -->
+                        <rect x="22" y="65" width="76" height="22" rx="5" fill="#0f766e" stroke="#2dd4bf" stroke-width="2"/>
+                        <text x="60" y="80" text-anchor="middle" fill="#fff" font-size="10" font-family="monospace" font-weight="bold">192.168.1.1</text>
+                      </svg>`
+            },
+            {
+                id: 9,
+                question: "ข้อใดอธิบาย MAC Address ได้ถูกต้อง",
+                options: [
+                    "ก. เปลี่ยนไปทุกครั้งที่ย้ายเครือข่าย",
+                    "ข. ติดมาจากโรงงานและไม่ซ้ำกันทั้งโลก",
+                    "ค. ตั้งเองได้ทุกวัน",
+                    "ง. ใช้แทนรหัสผ่าน WiFi"
+                ],
+                correctIndex: 1,
+                correctLetter: "ข",
+                answerShort: "ข. ติดมาจากโรงงานและไม่ซ้ำกันทั้งโลก",
+                reason: "MAC = เลขบัตรประชาชน ติดตัวอุปกรณ์ตลอด",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- ID Card -->
+                        <rect x="18" y="32" width="84" height="56" rx="8" fill="#1e293b" stroke="#818cf8" stroke-width="3"/>
+                        <circle cx="40" cy="56" r="10" fill="#818cf8"/>
+                        <line x1="58" y1="48" x2="90" y2="48" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+                        <line x1="58" y1="58" x2="82" y2="58" stroke="#64748b" stroke-width="3" stroke-linecap="round"/>
+                        <rect x="26" y="70" width="68" height="12" rx="3" fill="#0f172a"/>
+                        <text x="60" y="79" text-anchor="middle" fill="#2dd4bf" font-size="8" font-family="monospace">A1:B2:C3:D4:E5</text>
+                      </svg>`
+            },
+            {
+                id: 10,
+                question: '"ถ้าความชื้นในดินต่ำกว่า 30% แล้วเปิดปั๊มรดน้ำ" เป็นตัวอย่างของอะไร',
+                options: [
+                    "ก. การชาร์จแบตเตอรี่",
+                    "ข. การเปลี่ยน IP Address",
+                    "ค. การตั้งกฎ ถ้า-แล้ว ให้ระบบทำงานอัตโนมัติ",
+                    "ง. การเชื่อมต่อ Bluetooth"
+                ],
+                correctIndex: 2,
+                correctLetter: "ค",
+                answerShort: "ค. การตั้งกฎ ถ้า-แล้ว ให้ระบบทำงานอัตโนมัติ",
+                reason: "กฎ ถ้า-แล้ว ทำให้ระบบตัดสินใจเองได้",
+                svg: `<svg viewBox="0 0 120 120" class="w-full h-full">
+                        <!-- IF Box -->
+                        <rect x="14" y="38" width="38" height="44" rx="8" fill="#be123c" stroke="#fb7185" stroke-width="2"/>
+                        <text x="33" y="57" text-anchor="middle" fill="#fff" font-size="10" font-weight="bold">IF</text>
+                        <text x="33" y="71" text-anchor="middle" fill="#fecdd3" font-size="9">&lt; 30%</text>
+                        <!-- Arrow -->
+                        <path d="M56 60 L66 60 M63 55 L68 60 L63 65" stroke="#2dd4bf" stroke-width="3" fill="none" stroke-linecap="round"/>
+                        <!-- THEN Box -->
+                        <rect x="70" y="38" width="38" height="44" rx="8" fill="#0f766e" stroke="#2dd4bf" stroke-width="2"/>
+                        <text x="89" y="57" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold">THEN</text>
+                        <text x="89" y="71" text-anchor="middle" fill="#99f6e4" font-size="9">PUMP ON</text>
+                      </svg>`
+            }
+        ];
+
+        // State Variables
+        let deck = [...iotQuestions];
+        let currentIndex = 0;
+        let isFlipped = false;
+        let masteredIds = new Set();
+        let userQuizAnswers = {};
+
+        // Initialize App
+        function initApp() {
+            renderFlashcard();
+            renderQuiz();
+            renderSummaryTable();
+
+            // Keyboard Shortcuts for Flashcard Mode
+            document.addEventListener('keydown', (e) => {
+                const fcSection = document.getElementById('section-flashcard');
+                if (fcSection.classList.contains('hidden')) return;
+                if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    flipCard();
+                } else if (e.code === 'ArrowRight') {
+                    nextCard();
+                } else if (e.code === 'ArrowLeft') {
+                    prevCard();
+                }
+            });
+        }
+
+        // Switch Tabs (Flashcard / Quiz / Video)
+        function switchMode(mode) {
+            const modes = ['flashcard', 'quiz', 'video'];
+            modes.forEach(m => {
+                const section = document.getElementById(`section-${m}`);
+                const tab = document.getElementById(`tab-${m}`);
+                if (m === mode) {
+                    section.classList.remove('hidden');
+                    tab.className = "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-md";
+                } else {
+                    section.classList.add('hidden');
+                    tab.className = "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-all duration-200";
+                }
+            });
+        }
+
+        // ================= FLASHCARD FUNCTIONS =================
+        function renderFlashcard() {
+            const card = deck[currentIndex];
+            const inner = document.getElementById('flashcard-inner');
+            
+            // Reset flip state before updating content
+            isFlipped = false;
+            inner.classList.remove('card-flipped');
+
+            // Update Progress & Counter
+            document.getElementById('fc-counter').textContent = `การ์ด ${currentIndex + 1} / ${deck.length}`;
+            document.getElementById('fc-progress').style.width = `${((currentIndex + 1) / deck.length) * 100}%`;
+            document.getElementById('fc-badge').textContent = `คำถามข้อที่ ${card.id}`;
+
+            // Update Mastered Button State
+            const btnMastered = document.getElementById('btn-mastered');
+            document.getElementById('mastered-count').textContent = masteredIds.size;
+            if (masteredIds.has(card.id)) {
+                btnMastered.className = "flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 text-xs sm:text-sm font-semibold transition border border-emerald-500/40";
+            } else {
+                btnMastered.className = "flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs sm:text-sm font-medium transition border border-slate-700";
+            }
+
+            // Front Content
+            document.getElementById('fc-front-svg').innerHTML = card.svg;
+            document.getElementById('fc-question').textContent = `${card.id}. ${card.question}`;
+            
+            const optionsPreview = document.getElementById('fc-options-preview');
+            optionsPreview.innerHTML = card.options.map(opt => `
+                <div class="px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs sm:text-sm text-slate-300 truncate">
+                    ${opt}
+                </div>
+            `).join('');
+
+            // Back Content
+            document.getElementById('fc-back-svg').innerHTML = card.svg;
+            document.getElementById('fc-answer').textContent = card.answerShort;
+            document.getElementById('fc-reason').textContent = card.reason;
+
+            // Render Bottom Dots
+            const dotsContainer = document.getElementById('fc-dots');
+            dotsContainer.innerHTML = deck.map((item, idx) => {
+                const isCurrent = idx === currentIndex;
+                const isDone = masteredIds.has(item.id);
+                let dotClass = "bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700";
+                if (isCurrent) {
+                    dotClass = "bg-teal-500 text-white border-teal-400 scale-110 shadow-lg shadow-teal-500/30";
+                } else if (isDone) {
+                    dotClass = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+                }
+                return `
+                    <button onclick="jumpToCard(${idx})" class="w-9 h-9 rounded-xl border text-xs font-bold transition-all ${dotClass}">
+                        ${item.id}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const inner = document.getElementById('flashcard-inner');
+            inner.classList.toggle('card-flipped', isFlipped);
+        }
+
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % deck.length;
+            renderFlashcard();
+        }
+
+        function prevCard() {
+            currentIndex = (currentIndex - 1 + deck.length) % deck.length;
+            renderFlashcard();
+        }
+
+        function jumpToCard(idx) {
+            currentIndex = idx;
+            renderFlashcard();
+        }
+
+        function toggleMastered() {
+            const currentId = deck[currentIndex].id;
+            if (masteredIds.has(currentId)) {
+                masteredIds.delete(currentId);
+            } else {
+                masteredIds.add(currentId);
+            }
+            renderFlashcard();
+        }
+
+        function shuffleCards() {
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            currentIndex = 0;
+            renderFlashcard();
+        }
+
+        // ================= QUIZ FUNCTIONS =================
+        function renderQuiz() {
+            const container = document.getElementById('quiz-questions-container');
+            container.innerHTML = iotQuestions.map((q) => {
+                const selectedIdx = userQuizAnswers[q.id];
+                const isAnswered = selectedIdx !== undefined;
+
+                return `
+                    <div class="glass-panel rounded-3xl p-6 border border-slate-700/80 transition-all">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-5">
+                            <div class="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-800 p-2 shrink-0">
+                                ${q.svg}
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-teal-400 uppercase tracking-wider">ข้อที่ ${q.id}</span>
+                                <h3 class="text-lg sm:text-xl font-bold text-white mt-0.5">${q.question}</h3>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            ${q.options.map((opt, optIdx) => {
+                                let btnStyle = "bg-slate-900/80 hover:bg-slate-800 border-slate-700 text-slate-200";
+                                let iconHtml = `<span class="w-5 h-5 rounded-md border border-slate-600 flex items-center justify-center text-xs"></span>`;
+
+                                if (isAnswered) {
+                                    if (optIdx === q.correctIndex) {
+                                        btnStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-200 font-semibold";
+                                        iconHtml = `<i class="ph-fill ph-check-square text-xl text-emerald-400"></i>`;
+                                    } else if (optIdx === selectedIdx && selectedIdx !== q.correctIndex) {
+                                        btnStyle = "bg-rose-500/20 border-rose-500 text-rose-200";
+                                        iconHtml = `<i class="ph-fill ph-x-square text-xl text-rose-400"></i>`;
+                                    } else {
+                                        btnStyle = "bg-slate-900/40 border-slate-800 text-slate-500 opacity-60";
+                                    }
+                                }
+
+                                return `
+                                    <button 
+                                        onclick="selectQuizOption(${q.id}, ${optIdx})" 
+                                        ${isAnswered ? 'disabled' : ''}
+                                        class="flex items-center gap-3 p-4 rounded-2xl border text-left text-sm sm:text-base transition-all ${btnStyle}">
+                                        ${iconHtml}
+                                        <span>${opt}</span>
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        ${isAnswered ? `
+                            <div class="mt-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-700 flex items-start gap-3">
+                                <i class="ph-fill ph-info text-xl text-teal-400 shrink-0 mt-0.5"></i>
+                                <div class="text-xs sm:text-sm">
+                                    <span class="font-semibold text-teal-300">เฉลยข้อ ${q.correctLetter}:</span>
+                                    <span class="text-slate-300 ml-1">${q.reason}</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            updateQuizScore();
+        }
+
+        function selectQuizOption(questionId, optionIndex) {
+            if (userQuizAnswers[questionId] !== undefined) return;
+            userQuizAnswers[questionId] = optionIndex;
+            renderQuiz();
+        }
+
+        function updateQuizScore() {
+            let score = 0;
+            const answeredCount = Object.keys(userQuizAnswers).length;
+
+            iotQuestions.forEach(q => {
+                if (userQuizAnswers[q.id] === q.correctIndex) {
+                    score++;
+                }
+            });
+
+            document.getElementById('quiz-live-score').textContent = `${score} / 10`;
+
+            const resultBox = document.getElementById('quiz-result-box');
+            if (answeredCount === iotQuestions.length) {
+                resultBox.classList.remove('hidden');
+                const studentName = document.getElementById('student-name').value.trim();
+                document.getElementById('quiz-result-name').textContent = studentName ? `ผู้ทำแบบทดสอบ: ${studentName}` : '';
+                document.getElementById('quiz-final-score').textContent = `${score} / 10`;
+
+                let msg = "ยอดเยี่ยมมาก! คุณเข้าใจหลักการพื้นฐานของระบบ IoT อย่างครบถ้วน";
+                if (score < 5) {
+                    msg = "ลองทบทวนด้วยโหมด Flashcard และดูคลิปวิดีโอสอนอีกครั้ง แล้วมาลองทำใหม่นะ!";
+                } else if (score < 8) {
+                    msg = "ทำได้ดีมาก! ทบทวนอีกนิดหน่อยก็จะได้คะแนนเต็มแล้ว";
+                }
+                document.getElementById('quiz-feedback-msg').textContent = msg;
+            } else {
+                resultBox.classList.add('hidden');
+            }
+        }
+
+        function resetQuiz() {
+            userQuizAnswers = {};
+            renderQuiz();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ================= SUMMARY TABLE =================
+        function renderSummaryTable() {
+            const tbody = document.getElementById('summary-table-body');
+            tbody.innerHTML = iotQuestions.map(q => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="py-3.5 px-4 font-bold text-teal-400">${q.id}</td>
+                    <td class="py-3.5 px-4 text-slate-200 font-medium">${q.question}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-semibold text-xs">
+                            ${q.answerShort}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-300">${q.reason}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Start on Window Load
+        window.onload = initApp;
+    </script>
+</body>
+</html>
