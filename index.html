@@ -267,7 +267,7 @@
             </div>
 
             <!-- Navigation Tabs -->
-            <nav class="flex bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+            <nav class="flex flex-wrap bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 gap-1">
                 <button onclick="switchMode('flashcard')" id="tab-flashcard" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-md">
                     <i class="ph-bold ph-cards text-lg"></i>
                     <span>Flashcards สุ่มคำถาม</span>
@@ -275,6 +275,10 @@
                 <button onclick="switchMode('video')" id="tab-video" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-all duration-200">
                     <i class="ph-bold ph-youtube-logo text-lg text-rose-500"></i>
                     <span>คลิปสอน IoT + ตารางสรุป</span>
+                </button>
+                <button onclick="switchMode('sheet')" id="tab-sheet" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-all duration-200">
+                    <i class="ph-bold ph-google-spreadsheets-logo text-lg text-emerald-400"></i>
+                    <span>ตั้งค่า Google Sheet</span>
                 </button>
             </nav>
         </div>
@@ -527,6 +531,26 @@
                     <p id="result-message-body" class="text-sm sm:text-base text-slate-200 leading-relaxed"></p>
                 </div>
 
+                <!-- One-Click Classroom Score Save to Google Sheets (No Name Input Needed) -->
+                <div class="max-w-xl mx-auto bg-slate-900/90 border border-emerald-500/30 rounded-2xl p-5 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 text-left">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                                <i class="ph-bold ph-google-spreadsheets-logo text-2xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-white">บันทึกสถิติคะแนนหน้าห้องเรียนลง Google Sheet</h4>
+                                <p id="result-time-info" class="text-xs text-slate-400">ไม่ต้องกรอกชื่อ • กดปุ่มเดียวเพื่อเก็บสถิติรอบนี้ทันที</p>
+                            </div>
+                        </div>
+                        <button id="btn-save-sheet" onclick="submitScoreToSheet()" class="w-full sm:w-auto px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 transition transform active:scale-95">
+                            <i class="ph-bold ph-cloud-arrow-up text-lg"></i>
+                            <span>บันทึกคะแนนเข้า Google Sheet</span>
+                        </button>
+                    </div>
+                    <div id="sheet-save-status" class="hidden text-xs font-medium px-3.5 py-2 rounded-xl border text-center"></div>
+                </div>
+
                 <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button onclick="restartGame()" class="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-teal-500/25 flex items-center justify-center gap-2.5 transition transform hover:scale-105 active:scale-95">
                         <i class="ph-bold ph-shuffle text-xl"></i>
@@ -598,6 +622,123 @@
                             <!-- Injected via JS -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= MODE 3: GOOGLE SHEETS & APPS SCRIPT SETUP (CLASSROOM MODE) ================= -->
+        <section id="section-sheet" class="hidden space-y-6">
+            <div class="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-700/80 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                            <i class="ph-fill ph-google-spreadsheets-logo text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl sm:text-2xl font-bold text-white">เชื่อมต่อ Google Sheet (โหมดเล่นหน้าห้องเรียน)</h2>
+                            <p class="text-xs sm:text-sm text-slate-400">บันทึกคะแนนแต่ละรอบโดยไม่ต้องพิมพ์ชื่อ-นามสกุล เหมาะสำหรับเปิดขึ้นจอโปรเจกเตอร์หน้าห้อง</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Web App URL Input -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
+                    <label class="block text-sm font-bold text-teal-300">
+                        1. วางลิงก์ Google Apps Script Web App URL (ที่ลงท้ายด้วย /exec)
+                    </label>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input id="gas-webapp-url" type="url" placeholder="https://script.google.com/macros/s/AKfycbzHXq_5nqdfWqBqzLu169ookjn4mC_lBBTO4i3jaelAmGObKOEefhYF2SsZEwvqeeXB/exec" 
+                            class="flex-1 px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-sm focus:outline-none focus:border-teal-400">
+                        <button onclick="testSendScoreToSheet()" class="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition shrink-0">
+                            <i class="ph-bold ph-paper-plane-tilt"></i>
+                            <span>ทดสอบส่งคะแนน</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-2 pt-1">
+                        <input id="auto-send-checkbox" type="checkbox" checked class="w-4 h-4 accent-teal-500 rounded cursor-pointer">
+                        <label for="auto-send-checkbox" class="text-xs sm:text-sm text-slate-300 cursor-pointer">
+                            ส่งคะแนนเข้า Google Sheet <strong>อัตโนมัติทันที</strong> เมื่อเล่นครบ 10 ข้อ (ไม่ต้องกดปุ่มซ้ำ)
+                        </label>
+                    </div>
+                    <div id="test-sheet-status" class="hidden text-xs font-medium px-4 py-2.5 rounded-xl border"></div>
+                </div>
+
+                <!-- Step 2: Apps Script Code Copy Box -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h3 class="text-sm font-bold text-indigo-300">2. โค้ด Google Apps Script (Code.gs) แบบไม่ใช้ชื่อ-นามสกุล</h3>
+                            <p class="text-xs text-slate-400">นำไปวางใน Google Sheet &gt; ส่วนขยาย (Extensions) &gt; Apps Script &gt; Deploy เป็น Web App (สิทธิ์: ทุกคน / Anyone)</p>
+                        </div>
+                        <button onclick="copyAppsScriptCode()" id="btn-copy-gas" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition">
+                            <i class="ph-bold ph-copy"></i>
+                            <span>คัดลอกโค้ด Apps Script</span>
+                        </button>
+                    </div>
+                    <pre id="gas-code-block" class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-teal-200 overflow-x-auto max-h-64 font-mono leading-relaxed select-all">const SHEET_NAME = 'คะแนนหน้าห้อง_IoT';
+
+function setupSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
+  if (sheet.getLastRow() === 0) {
+    const headers = ['รอบที่', 'วัน-เวลา', 'คะแนนที่ได้', 'คะแนนเต็ม', 'คิดเป็นร้อยละ (%)', 'ระดับผลการประเมิน', 'เวลาที่ใช้ (วินาที)'];
+    sheet.appendRow(headers);
+    sheet.getRange(1, 1, 1, headers.length).setBackground('#0f766e').setFontColor('#ffffff').setFontWeight('bold');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function doPost(e) {
+  const sheet = setupSheet();
+  const data = e.postData && e.postData.contents ? JSON.parse(e.postData.contents) : e.parameter;
+  const roundNo = sheet.getLastRow();
+  const score = Number(data.score || 0);
+  const total = Number(data.total || 10);
+  const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+  const durationSec = Number(data.durationSec || 0);
+  const level = score >= 8 ? 'ดีเยี่ยม (8-10)' : (score >= 5 ? 'ผ่านเกณฑ์ดี (5-7)' : 'ควรทบทวนเพิ่มเติม (0-4)');
+
+  sheet.appendRow([
+    'รอบที่ ' + roundNo,
+    Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss'),
+    score,
+    total,
+    percent + '%',
+    level,
+    durationSec
+  ]);
+
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', round: roundNo }))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+                </div>
+
+                <!-- Step 3: Local Session History Table -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="ph-bold ph-clock-counter-clockwise text-teal-400"></i>
+                        ประวัติคะแนนที่เล่นหน้าห้องในคาบนี้
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-800 text-slate-400">
+                                    <th class="py-2.5 px-3">รอบที่</th>
+                                    <th class="py-2.5 px-3">เวลา</th>
+                                    <th class="py-2.5 px-3">คะแนน</th>
+                                    <th class="py-2.5 px-3">ผลประเมิน</th>
+                                    <th class="py-2.5 px-3">ใช้เวลา</th>
+                                </tr>
+                            </thead>
+                            <tbody id="session-history-tbody" class="divide-y divide-slate-800/60 text-slate-200">
+                                <tr>
+                                    <td colspan="5" class="py-4 text-center text-slate-500">ยังไม่มีประวัติการเล่นในรอบนี้</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </section>
@@ -851,6 +992,141 @@
             }
         ];
 
+        // ============================================================================
+        // GOOGLE SHEETS & APPS SCRIPT INTEGRATION
+        // สามารถนำ Web App URL มาวางใน DEFAULT_GAS_WEBAPP_URL ด้านล่างนี้ได้โดยตรง
+        // ============================================================================
+        const DEFAULT_GAS_WEBAPP_URL = ""; 
+        let activeGasWebAppUrl = DEFAULT_GAS_WEBAPP_URL;
+        let localSubmissionHistory = [];
+        let hasSubmittedCurrentGame = false;
+        let gameStartTime = Date.now();
+
+        const APPS_SCRIPT_CODE_TEMPLATE = `/**
+ * Google Apps Script สำหรับรับคะแนน Flashcard หลักการพื้นฐาน IoT
+ * วิธีติดตั้ง:
+ * 1. เปิด Google Sheets -> เมนู ส่วนขยาย (Extensions) -> Apps Script
+ * 2. วางโค้ดนี้ทับทั้งหมด แล้วกดบันทึก (Ctrl+S)
+ * 3. กดปุ่ม "การทำให้ใช้งานได้" (Deploy) -> "รายการใหม่" (New deployment)
+ * 4. เลือกประเภทเป็น "เว็บแอป" (Web app)
+ *    - ดำเนินการในฐานะ (Execute as): ฉัน (Me)
+ *    - ผู้มีสิทธิ์เข้าถึง (Who has access): ทุกคน (Anyone)
+ * 5. คัดลอก Web App URL (.../exec) ไปใส่ในหน้าเว็บ Flashcard
+ */
+
+const SHEET_NAME = 'คะแนน_IoT';
+
+function setupSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    const headers = [
+      'ประทับเวลา (Timestamp)',
+      'ชื่อ - นามสกุล',
+      'ห้อง / เลขที่',
+      'คะแนนที่ได้',
+      'คะแนนเต็ม',
+      'คิดเป็นร้อยละ (%)',
+      'ระดับผลการประเมิน',
+      'เวลาที่ใช้ (วินาที)'
+    ];
+    sheet.appendRow(headers);
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#0f766e');
+    headerRange.setFontColor('#ffffff');
+    headerRange.setFontWeight('bold');
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  return sheet;
+}
+
+// รองรับการบันทึกคะแนนจากหน้าเว็บ (POST)
+function doPost(e) {
+  try {
+    const sheet = setupSheet();
+    let payload = {};
+
+    if (e.postData && e.postData.contents) {
+      payload = JSON.parse(e.postData.contents);
+    } else if (e.parameter) {
+      payload = e.parameter;
+    }
+
+    const timestamp = new Date();
+    const studentName = payload.studentName || 'ไม่ระบุชื่อ';
+    const studentClass = payload.studentClass || '-';
+    const score = Number(payload.score || 0);
+    const total = Number(payload.total || 10);
+    const percent = total > 0 ? Math.round((score / total) * 100) : 0;
+    const durationSec = Number(payload.durationSec || 0);
+
+    let levelText = 'ควรทบทวนเพิ่มเติม (0-4)';
+    if (score >= 8) {
+      levelText = 'ดีเยี่ยม (8-10)';
+    } else if (score >= 5) {
+      levelText = 'ผ่านเกณฑ์ดี (5-7)';
+    }
+
+    sheet.appendRow([
+      Utilities.formatDate(timestamp, 'Asia/Bangkok', 'dd/MM/yyyy HH:mm:ss'),
+      studentName,
+      studentClass,
+      score,
+      total,
+      percent + '%',
+      levelText,
+      durationSec
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'บันทึกคะแนนลง Google Sheets สำเร็จ!'
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// รองรับการดึงประวัติคะแนนล่าสุดไปแสดงบนหน้าเว็บ (GET)
+function doGet(e) {
+  try {
+    const sheet = setupSheet();
+    const rows = sheet.getDataRange().getValues();
+    const records = [];
+
+    for (let i = Math.max(1, rows.length - 15); i < rows.length; i++) {
+      records.push({
+        timestamp: rows[i][0],
+        studentName: rows[i][1],
+        studentClass: rows[i][2],
+        score: rows[i][3],
+        total: rows[i][4],
+        percent: rows[i][5],
+        evaluation: rows[i][6]
+      });
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      data: records.reverse()
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+
         // State for Non-repeating Random Flashcard Game
         let remainingPool = [];
         let answeredCount = 0;
@@ -861,6 +1137,12 @@
         let isFlippingNow = false;
         let tiltRafId = null;
         let stageRectCache = null;
+
+        // Classroom Session Tracking (No Student Name Required)
+        let roundStartTime = Date.now();
+        let lastRoundDurationSec = 0;
+        let classroomHistory = [];
+        let hasSavedCurrentRound = false;
 
         // Cached DOM Elements for Zero-Overhead Lookups
         let domStage = null;
@@ -982,6 +1264,12 @@
             domCardInner = document.getElementById('flashcard-inner');
             domGlareFront = document.getElementById('glare-front');
             domGlareBack = document.getElementById('glare-back');
+
+            const urlInput = document.getElementById('gas-webapp-url');
+            if (urlInput && DEFAULT_GAS_WEBAPP_URL) {
+                urlInput.value = DEFAULT_GAS_WEBAPP_URL;
+            }
+
             restartGame();
             renderSummaryTable();
         }
@@ -995,6 +1283,16 @@
             currentCard = null;
             isFlipped = false;
             hasAnsweredCurrent = false;
+            roundStartTime = Date.now();
+            hasSavedCurrentRound = false;
+
+            const statusBox = document.getElementById('sheet-save-status');
+            if (statusBox) statusBox.classList.add('hidden');
+            const saveBtn = document.getElementById('btn-save-sheet');
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `<i class="ph-bold ph-cloud-arrow-up text-lg"></i><span>บันทึกคะแนนเข้า Google Sheet</span>`;
+            }
 
             updateTopBar();
             showScreen('draw');
@@ -1206,7 +1504,13 @@
             showScreen('result');
 
             const total = iotQuestions.length;
+            lastRoundDurationSec = Math.max(1, Math.round((Date.now() - roundStartTime) / 1000));
             document.getElementById('result-score-title').textContent = `คุณตอบถูก ${correctScore} / ${total} ข้อ`;
+
+            const timeInfoEl = document.getElementById('result-time-info');
+            if (timeInfoEl) {
+                timeInfoEl.textContent = `ใช้เวลาในรอบนี้ ${lastRoundDurationSec} วินาที • กดปุ่มเดียวเพื่อบันทึกสถิติหน้าห้องเรียน`;
+            }
 
             const iconWrap = document.getElementById('result-icon-wrap');
             const msgBox = document.getElementById('result-message-box');
@@ -1241,11 +1545,144 @@
                 msgHeading.textContent = "สุดยอดไปเลย! คุณเข้าใจพื้นฐาน IoT ได้อย่างแม่นยำมาก 🎉🏆";
                 msgBody.textContent = "ขอปรบมือชื่นชมดังๆ เลยค่ะ! คุณมีความรู้ความเข้าใจเรื่ององค์ประกอบ อุปกรณ์ และการทำงานของ IoT ในระดับดีเยี่ยม พร้อมสำหรับการนำไปต่อยอดทำโปรเจกต์จริงได้อย่างสบายๆ เลยค่ะ!";
             }
+
+            // Record in local classroom session table immediately
+            recordClassroomHistory(correctScore, total, lastRoundDurationSec);
+
+            // Auto-send to Google Sheet if URL is configured and auto-send is checked
+            const urlInput = document.getElementById('gas-webapp-url');
+            const autoSend = document.getElementById('auto-send-checkbox');
+            const activeUrl = (urlInput && urlInput.value.trim()) ? urlInput.value.trim() : DEFAULT_GAS_WEBAPP_URL;
+            if (activeUrl && autoSend && autoSend.checked && !hasSavedCurrentRound) {
+                submitScoreToSheet();
+            }
         }
 
-        // Switch Tabs (Flashcard / Video)
+        // Record round score in local classroom session table
+        function recordClassroomHistory(score, total, durationSec) {
+            const roundNumber = classroomHistory.length + 1;
+            const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const levelText = score >= 8 ? 'ดีเยี่ยม (8-10)' : (score >= 5 ? 'ผ่านเกณฑ์ดี (5-7)' : 'ควรทบทวน (0-4)');
+            classroomHistory.unshift({ roundNumber, timeStr, score, total, levelText, durationSec });
+
+            const tbody = document.getElementById('session-history-tbody');
+            if (!tbody) return;
+            tbody.innerHTML = classroomHistory.map(item => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="py-2.5 px-3 font-bold text-teal-300">รอบที่ ${item.roundNumber}</td>
+                    <td class="py-2.5 px-3 text-slate-300">${item.timeStr}</td>
+                    <td class="py-2.5 px-3 font-bold text-emerald-300">${item.score} / ${item.total}</td>
+                    <td class="py-2.5 px-3 text-slate-200">${item.levelText}</td>
+                    <td class="py-2.5 px-3 text-slate-400">${item.durationSec} วินาที</td>
+                </tr>
+            `).join('');
+        }
+
+        // Send score to Google Sheet without requiring student name
+        async function submitScoreToSheet() {
+            const urlInput = document.getElementById('gas-webapp-url');
+            const statusBox = document.getElementById('sheet-save-status');
+            const saveBtn = document.getElementById('btn-save-sheet');
+            const webAppUrl = (urlInput && urlInput.value.trim()) ? urlInput.value.trim() : DEFAULT_GAS_WEBAPP_URL;
+
+            if (!webAppUrl) {
+                statusBox.classList.remove('hidden');
+                statusBox.className = "text-xs font-medium px-3.5 py-2.5 rounded-xl border bg-amber-950/70 border-amber-500/40 text-amber-200";
+                statusBox.innerHTML = `ยังไม่ได้ใส่ลิงก์ Google Sheet Web App URL • <button onclick="switchMode('sheet')" class="underline font-bold text-teal-300 ml-1">คลิกที่นี่เพื่อไปหน้าตั้งค่า</button>`;
+                return;
+            }
+
+            if (hasSavedCurrentRound) return;
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = `<i class="ph-bold ph-spinner animate-spin text-lg"></i><span>กำลังบันทึก...</span>`;
+
+            const payload = {
+                roundLabel: `รอบที่ ${classroomHistory.length || 1}`,
+                score: correctScore,
+                total: iotQuestions.length,
+                durationSec: lastRoundDurationSec || 1
+            };
+
+            try {
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                hasSavedCurrentRound = true;
+                saveBtn.innerHTML = `<i class="ph-bold ph-check-circle text-lg"></i><span>บันทึกเรียบร้อยแล้ว</span>`;
+                statusBox.classList.remove('hidden');
+                statusBox.className = "text-xs font-medium px-3.5 py-2 rounded-xl border bg-emerald-950/70 border-emerald-500/40 text-emerald-200";
+                statusBox.textContent = `บันทึกคะแนน (${correctScore}/${iotQuestions.length} ข้อ) เข้า Google Sheet เรียบร้อยแล้ว!`;
+            } catch (err) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `<i class="ph-bold ph-cloud-arrow-up text-lg"></i><span>ลองส่งอีกครั้ง</span>`;
+                statusBox.classList.remove('hidden');
+                statusBox.className = "text-xs font-medium px-3.5 py-2 rounded-xl border bg-rose-950/70 border-rose-500/40 text-rose-200";
+                statusBox.textContent = "ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบลิงก์ Web App URL";
+            }
+        }
+
+        // Test sending a sample classroom score from the Setup Tab
+        async function testSendScoreToSheet() {
+            const urlInput = document.getElementById('gas-webapp-url');
+            const testStatus = document.getElementById('test-sheet-status');
+            const webAppUrl = (urlInput && urlInput.value.trim()) ? urlInput.value.trim() : DEFAULT_GAS_WEBAPP_URL;
+
+            if (!webAppUrl) {
+                testStatus.classList.remove('hidden');
+                testStatus.className = "text-xs font-medium px-4 py-2.5 rounded-xl border bg-rose-950/70 border-rose-500/40 text-rose-200";
+                testStatus.textContent = "กรุณาวางลิงก์ Web App URL ที่ลงท้ายด้วย /exec ก่อนกดทดสอบค่ะ";
+                return;
+            }
+
+            testStatus.classList.remove('hidden');
+            testStatus.className = "text-xs font-medium px-4 py-2.5 rounded-xl border bg-teal-950/70 border-teal-500/40 text-teal-200";
+            testStatus.textContent = "กำลังส่งข้อมูลทดสอบไปที่ Google Sheet...";
+
+            try {
+                await fetch(webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        roundLabel: "ทดสอบระบบหน้าห้อง",
+                        score: 9,
+                        total: 10,
+                        durationSec: 45
+                    })
+                });
+                testStatus.className = "text-xs font-medium px-4 py-2.5 rounded-xl border bg-emerald-950/70 border-emerald-500/40 text-emerald-200";
+                testStatus.textContent = "ส่งข้อมูลทดสอบสำเร็จ! ลองเปิดดูตารางใน Google Sheet ของคุณได้เลยค่ะ";
+            } catch (e) {
+                testStatus.className = "text-xs font-medium px-4 py-2.5 rounded-xl border bg-rose-950/70 border-rose-500/40 text-rose-200";
+                testStatus.textContent = "เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาตรวจสอบ URL อีกครั้ง";
+            }
+        }
+
+        // Copy Apps Script Code using document.execCommand('copy')
+        function copyAppsScriptCode() {
+            const codeText = document.getElementById('gas-code-block').innerText;
+            const tempArea = document.createElement('textarea');
+            tempArea.value = codeText;
+            document.body.appendChild(tempArea);
+            tempArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempArea);
+
+            const copyBtn = document.getElementById('btn-copy-gas');
+            copyBtn.innerHTML = `<i class="ph-bold ph-check text-emerald-300"></i><span>คัดลอกโค้ดเรียบร้อย!</span>`;
+            setTimeout(() => {
+                copyBtn.innerHTML = `<i class="ph-bold ph-copy"></i><span>คัดลอกโค้ด Apps Script</span>`;
+            }, 2200);
+        }
+
+        // Switch Tabs (Flashcard / Video / Sheet)
         function switchMode(mode) {
-            const modes = ['flashcard', 'video'];
+            const modes = ['flashcard', 'video', 'sheet'];
             modes.forEach(m => {
                 const section = document.getElementById(`section-${m}`);
                 const tab = document.getElementById(`tab-${m}`);
